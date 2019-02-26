@@ -80,8 +80,8 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         mSettingsClient = LocationServices.getSettingsClient(this);
 
-       //MapFragment mapFragment = (MapFragment) getFragmentManager().findFragmentById(R.id.map);
-        //mapFragment.getMapAsync(this);
+        MapFragment mapFragment = (MapFragment) getFragmentManager().findFragmentById(R.id.map);
+        mapFragment.getMapAsync(this);
 
 
         FloatingActionButton fab = findViewById(R.id.fab);
@@ -103,9 +103,9 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-        mMap.addMarker(new MarkerOptions()
-                .position(new LatLng(0, 0))
-                .title("Marker"));
+        //mMap.addMarker(new MarkerOptions()
+              //  .position(new LatLng(0, 0))
+              //  .title("Marker"));
     }
 
     /**

@@ -21,15 +21,15 @@
         android:id="@+id/imageView"
         android:layout_width="200dp"
         android:layout_height="158dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="496dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="396dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         tools:src="@tools:sample/avatars" />
 
     <FrameLayout
-        android:layout_width="395dp"
-        android:layout_height="480dp"
+        android:layout_width="314dp"
+        android:layout_height="371dp"
         android:layout_marginStart="8dp"
         android:layout_marginTop="8dp"
         app:layout_constraintStart_toStartOf="parent"
@@ -37,9 +37,9 @@
 
         <fragment
             android:id="@+id/map"
+            class="com.google.android.gms.maps.MapFragment"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            class="com.google.android.gms.maps.MapFragment" />
+            android:layout_height="match_parent" />
     </FrameLayout>
 
 </android.support.constraint.ConstraintLayout>
