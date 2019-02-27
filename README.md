@@ -6,4 +6,6 @@ Description: Starts with map focused on User. Camera button opens camera intent.
 
 Keystore is in the repo which is what i was told is all the app needs to be ran anywhere
 
+Ran on Motorola Z force
+
 Anything that doesn't work: Everything works now
