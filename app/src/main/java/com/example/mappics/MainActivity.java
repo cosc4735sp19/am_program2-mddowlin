@@ -1,11 +1,14 @@
 package com.example.mappics;
 
 import android.Manifest;
+import android.app.Dialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
-
 
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
@@ -13,60 +16,41 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.util.Pair;
 import android.view.View;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.location.Location;
+import android.view.Window;
 import android.widget.ImageView;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
-
-import com.google.android.gms.location.SettingsClient;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.location.LocationSettingsRequest;
-import com.google.android.gms.location.LocationSettingsResponse;
-import com.google.android.gms.location.LocationSettingsStatusCodes;
 import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
-import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.MarkerOptions;
-
-import com.google.android.gms.maps.CameraUpdateFactory;
-import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.OnMapReadyCallback;
-import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 
-public class MainActivity extends FragmentActivity implements OnMapReadyCallback{
+import java.util.ArrayList;
 
-    public static final int REQUEST_ACCESS_startLocationUpdates = 0;
+
+public class MainActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
+
     public static final int REQUEST_ACCESS_onConnected = 1;
-    /**
-     * Constant used in the location settings dialog.
-     */
-    private static final int REQUEST_CHECK_SETTINGS = 0x1;
 
-
-    Location mLastLocation;
+    Location mLocation;
     LocationRequest mLocationRequest;
-    ImageView iv;
+    ArrayList<Pair<Marker, Bitmap>> PictureRoll;
 
     private GoogleMap mMap;
     private FusedLocationProviderClient mFusedLocationClient;
-    private SettingsClient mSettingsClient;
-    private LocationSettingsRequest mLocationSettingsRequest;
 
     String TAG = "MainActivity";
 
@@ -74,14 +58,13 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        iv = findViewById(R.id.imageView);
+        PictureRoll = new ArrayList<>();
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-        mSettingsClient = LocationServices.getSettingsClient(this);
-
         MapFragment mapFragment = (MapFragment) getFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
+
 
 
         FloatingActionButton fab = findViewById(R.id.fab);
@@ -93,39 +76,59 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
-        buildLocationSettingsRequest();
-        getPermission();
-
-        //If reached here, will have location permissions
+        createLocationRequest();
+        getLastLocation();
 
     }
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-        //mMap.addMarker(new MarkerOptions()
-              //  .position(new LatLng(0, 0))
-              //  .title("Marker"));
+        mMap.setOnMarkerClickListener(this);
     }
 
-    /**
-     * Uses a {@link com.google.android.gms.location.LocationSettingsRequest.Builder} to build
-     * a {@link com.google.android.gms.location.LocationSettingsRequest} that is used for checking
-     * if a device has the needed location settings.
-     */
-    private void buildLocationSettingsRequest() {
-        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
-        builder.addLocationRequest(mLocationRequest);
-        mLocationSettingsRequest = builder.build();
+
+    protected void createLocationRequest() {
+        mLocationRequest = new LocationRequest();
+        mLocationRequest.setInterval(10000);
+        mLocationRequest.setFastestInterval(5000);
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
     }
 
-    protected void getPermission() {
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
-        {
+
+
+    //This shows how to get a "one off" location.  instead of using the location updates
+    //
+    public void getLastLocation() {
+        //first check to see if I have permissions (marshmallow) if I don't then ask, otherwise start up the demo.
+        if ((ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) &&
+                (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)) {
+            //I'm on not explaining why, just asking for permission.
             Log.v(TAG, "asking for permissions");
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                    MainActivity.REQUEST_ACCESS_startLocationUpdates);
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
+                    MainActivity.REQUEST_ACCESS_onConnected);
+            return;
         }
+        mFusedLocationClient.getLastLocation()
+                .addOnSuccessListener(this, new OnSuccessListener<Location>() {
+                    @Override
+                    public void onSuccess(Location location) {
+                        if (location == null) {
+                            Log.w(TAG, "onSuccess:null");
+                            return;
+                        }
+                        mLocation = location;
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(mLocation.getLatitude(), mLocation.getLongitude()), 15));
+                        Log.v(TAG, "getLastLocation");
+                    }
+                })
+                .addOnFailureListener(this, new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.w(TAG, "getLastLocation:onFailure", e);
+                    }
+                });
+
     }
 
     /**
@@ -134,27 +137,25 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         Log.v(TAG, "onRequest result called.");
-        boolean fine = false;
+        boolean coarse = false, fine = false;
 
         //received result for GPS access
         for (int i = 0; i < grantResults.length; i++) {
-            if ((permissions[i].compareTo(Manifest.permission.ACCESS_FINE_LOCATION) == 0) &&
+            if ((permissions[i].compareTo(Manifest.permission.ACCESS_COARSE_LOCATION) == 0) &&
+                    (grantResults[i] == PackageManager.PERMISSION_GRANTED))
+                coarse = true;
+            else if ((permissions[i].compareTo(Manifest.permission.ACCESS_FINE_LOCATION) == 0) &&
                     (grantResults[i] == PackageManager.PERMISSION_GRANTED))
                 fine = true;
         }
+
         Log.v(TAG, "Received response for gps permission request.");
         // If request is cancelled, the result arrays are empty.
-        if (fine) {
-            // permission was granted
-            Log.v(TAG, permissions[0] + " permission has now been granted. Showing preview.");
-            Toast.makeText(this, "GPS access granted",
-                    Toast.LENGTH_SHORT).show();
-
-
+        if (coarse && fine) {
+            Log.v(TAG, permissions[0] + " permission has now been granted.");
         } else {
-            // permission denied,    Disable this feature or close the app.
+            // permission denied.
             Log.v(TAG, "GPS permission was NOT granted.");
-            Toast.makeText(this, "GPS access NOT granted", Toast.LENGTH_SHORT).show();
             finish();
         }
 
@@ -164,19 +165,62 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        //the picture is stored in the intent in the data key.
-        //get the picture and show it in an the imagview.
-        //Note the picture is not stored on the filesystem, so this is the only "copy" of the picture.
+        //get the picture and show it in an the image view.
         Bundle extras = data.getExtras();
         Log.i(TAG, "Works well to here");
         if (extras != null) {
-            //if you know for a fact there will be a bundle, you can use  data.getExtras().get("Data");  but we don't know.
+            getLastLocation();
+            LatLng tmpLL = new LatLng(mLocation.getLatitude(), mLocation.getLongitude());
+            Toast.makeText(this, "Location is " + tmpLL.latitude + ", " + tmpLL.longitude, Toast.LENGTH_SHORT).show();
+            Marker tmpMarker = mMap.addMarker(new MarkerOptions().position(tmpLL));
             Bitmap bp = (Bitmap) extras.get("data");
-            iv.setImageBitmap(bp);
-            iv.invalidate();
+            Pair tempPair = new Pair(tmpMarker, bp);
+            PictureRoll.add(tempPair);
         } else {
             Toast.makeText(this, "No picture was returned", Toast.LENGTH_SHORT).show();
         }
     }
+
+    @Override
+    public boolean onMarkerClick(final Marker marker) {
+        LatLng myLatLng = marker.getPosition();
+        Log.i(TAG, "It is fine here");
+        for(int i = 0; i < PictureRoll.size(); i++)
+        {
+            if (marker.equals(PictureRoll.get(i).first))
+            {
+                //Build dialog
+                Toast.makeText(this, "Yay you found it", Toast.LENGTH_SHORT).show();
+                showImage(PictureRoll.get(i).second);
+
+
+                return true;
+            }
+        }
+        Log.i(TAG, "we never find it");
+        return false;
+    }
+
+    public void showImage(Bitmap bp) {
+        Dialog builder = new Dialog(this);
+        builder.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        builder.getWindow().setBackgroundDrawable(
+                new ColorDrawable(Color.TRANSPARENT));
+        builder.getWindow().setLayout(1000,1000);
+        builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialogInterface) {
+                //nothing;
+            }
+        });
+
+        ImageView imageView = new ImageView(this);
+        imageView.setImageBitmap(bp);
+        builder.addContentView(imageView, new RelativeLayout.LayoutParams(1000,1000));
+        builder.show();
+
+
+    }
+
 
 }
