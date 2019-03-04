@@ -23,7 +23,6 @@ import android.location.Location;
 import android.view.Window;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
-import android.widget.Toast;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -87,18 +86,17 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.setOnMarkerClickListener(this);
     }
 
-
     protected void createLocationRequest() {
+        Log.i(TAG, "This gets called a lot");
         mLocationRequest = new LocationRequest();
         mLocationRequest.setInterval(10000);
         mLocationRequest.setFastestInterval(5000);
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
     }
 
-
-
-    //This shows how to get a "one off" location.  instead of using the location updates
-    //
+    /**
+     * Gets location for app whenever needed
+     **/
     public void getLastLocation() {
         //first check to see if I have permissions (marshmallow) if I don't then ask, otherwise start up the demo.
         if ((ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) &&
@@ -132,8 +130,8 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     /**
-     * Callback received when a permissions request has been completed.
-     */
+     * Just close if we're not getting the permissions we need
+     **/
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         Log.v(TAG, "onRequest result called.");
@@ -149,8 +147,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 fine = true;
         }
 
-        Log.v(TAG, "Received response for gps permission request.");
-        // If request is cancelled, the result arrays are empty.
         if (coarse && fine) {
             Log.v(TAG, permissions[0] + " permission has now been granted.");
         } else {
@@ -162,38 +158,35 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
+    /**
+     *Deal with result of camera
+     **/
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        //get the picture and show it in an the image view.
         Bundle extras = data.getExtras();
-        Log.i(TAG, "Works well to here");
         if (extras != null) {
             getLastLocation();
             LatLng tmpLL = new LatLng(mLocation.getLatitude(), mLocation.getLongitude());
-            Toast.makeText(this, "Location is " + tmpLL.latitude + ", " + tmpLL.longitude, Toast.LENGTH_SHORT).show();
             Marker tmpMarker = mMap.addMarker(new MarkerOptions().position(tmpLL));
             Bitmap bp = (Bitmap) extras.get("data");
             Pair tempPair = new Pair(tmpMarker, bp);
             PictureRoll.add(tempPair);
         } else {
-            Toast.makeText(this, "No picture was returned", Toast.LENGTH_SHORT).show();
         }
     }
 
+    /**
+     * Find which marker was clicked on
+     **/
     @Override
     public boolean onMarkerClick(final Marker marker) {
-        LatLng myLatLng = marker.getPosition();
-        Log.i(TAG, "It is fine here");
         for(int i = 0; i < PictureRoll.size(); i++)
         {
             if (marker.equals(PictureRoll.get(i).first))
             {
                 //Build dialog
-                Toast.makeText(this, "Yay you found it", Toast.LENGTH_SHORT).show();
                 showImage(PictureRoll.get(i).second);
-
-
                 return true;
             }
         }
