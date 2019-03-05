@@ -1,6 +1,7 @@
 package com.example.mappics;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -80,9 +81,11 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
+    @SuppressLint("MissingPermission")
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
+        mMap.setMyLocationEnabled(true);
         mMap.setOnMarkerClickListener(this);
     }
 
@@ -161,17 +164,24 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     /**
      *Deal with result of camera
      **/
+    @SuppressLint("MissingPermission")
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        Bundle extras = data.getExtras();
+        final Bundle extras = data.getExtras();
+
         if (extras != null) {
-            getLastLocation();
-            LatLng tmpLL = new LatLng(mLocation.getLatitude(), mLocation.getLongitude());
-            Marker tmpMarker = mMap.addMarker(new MarkerOptions().position(tmpLL));
-            Bitmap bp = (Bitmap) extras.get("data");
-            Pair tempPair = new Pair(tmpMarker, bp);
-            PictureRoll.add(tempPair);
+            mFusedLocationClient.getLastLocation().addOnSuccessListener(this, new OnSuccessListener<Location>() {
+                @Override
+                public void onSuccess(Location location) {
+                    LatLng tmpLL = new LatLng(location.getLatitude(), location.getLongitude());
+                    Marker tmpMarker = mMap.addMarker(new MarkerOptions().position(tmpLL));
+                    Bitmap bp = (Bitmap) extras.get("data");
+                    Pair tempPair = new Pair(tmpMarker, bp);
+                    PictureRoll.add(tempPair);
+
+                }
+            });
         } else {
         }
     }
