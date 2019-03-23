@@ -9,3 +9,7 @@ Keystore is in the repo which is what i was told is all the app needs to be ran 
 Ran on Motorola Z force
 
 Anything that doesn't work: Everything works now
+
+# Graded: 50/50 #
+
+* Everything works as expected
